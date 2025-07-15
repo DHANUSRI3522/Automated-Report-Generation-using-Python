@@ -1,0 +1,78 @@
+import pandas as pd
+import matplotlib.pyplot as plt
+from fpdf import FPDF
+from datetime import datetime
+import logging
+
+logging.basicConfig(filename='report.log', level=logging.INFO)
+
+try:
+    data = pd.DataFrame({
+        "Product": ["A", "B", "C", "D", "E"],
+        "Sales": [100, 200, 150, 250, 300],
+        "Revenue": [1500, 3000, 2700, 4000, 5000]
+    })
+    data.to_csv("sample_data.csv", index=False)
+
+    summary = data.describe()
+
+    plt.figure(figsize=(8, 5))
+    data.groupby("Product")["Revenue"].sum().plot(kind="bar", color="skyblue")
+    plt.title("Revenue by Product")
+    plt.xlabel("Product")
+    plt.ylabel("Revenue")
+    plt.tight_layout()
+    plt.savefig("revenue_plot.png")
+    plt.close()
+
+    class PDF(FPDF):
+        def header(self):
+            self.set_font("Arial", "B", 14)
+            self.cell(0, 10, "Automated Data Analysis Report", ln=True, align='C')
+            self.ln(5)
+
+        def footer(self):
+            self.set_y(-15)
+            self.set_font("Arial", "I", 8)
+            self.cell(0, 10, f"Page {self.page_no()}", align='C')
+
+        def add_summary_table(self, dataframe):
+            self.set_font("Arial", size=10)
+            self.ln(10)
+            effective_page_width = self.w - 2 * self.l_margin
+            col_width = effective_page_width / len(dataframe.columns)
+            for col in dataframe.columns:
+                self.set_fill_color(200, 220, 255)
+                self.cell(col_width, 8, col, border=1, fill=True)
+            self.ln()
+            for i in range(len(dataframe)):
+                for col in dataframe.columns:
+                    self.cell(col_width, 8, f"{dataframe[col].iloc[i]:.2f}", border=1)
+                self.ln()
+
+        def add_certificate(self, name, date_str):
+            self.add_page()
+            self.set_font("Arial", "B", 16)
+            self.cell(0, 20, "CodTech Internship Completion Certificate", ln=True, align='C')
+            self.set_font("Arial", "", 12)
+            self.ln(10)
+            self.multi_cell(0, 10, f"This is to certify that {name} has successfully completed their internship at CodTech. "
+                                   f"The internship included tasks such as automated report generation using Python. "
+                                   f"The certificate is awarded on {date_str}.")
+            self.ln(10)
+            self.cell(0, 10, "Congratulations!", ln=True, align='C')
+
+    pdf = PDF()
+    pdf.add_page()
+    pdf.set_font("Arial", "B", 12)
+    pdf.cell(0, 10, "Summary Statistics:", ln=True)
+    pdf.add_summary_table(summary)
+    pdf.image("revenue_plot.png", x=10, y=None, w=180)
+
+    intern_name = "Dhanusri M"
+    end_date = datetime.now().strftime("%d-%m-%Y")
+    pdf.add_certificate(intern_name, end_date)
+    pdf.output("sample_report_dhanusri.pdf")
+
+except Exception as e:
+    logging.error(f"Error occurred: {e}")
